@@ -1,165 +1,194 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OWEN FILES | SECURE TERMINAL</title>
-    <style>
-        :root { --bg: #0a0a0a; --red: #ff3b3b; --gray: #444; --white: #eee; --font: 'Courier New', Courier, monospace; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg); color: var(--white); font-family: var(--font); overflow: hidden; }
-        
-        #lines { position: fixed; inset: 0; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), repeating-linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03)); background-size: 100% 4px, 3px 100%; pointer-events: none; z-index: 1000; }
-
-        .screen { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
-        .active { display: flex; }
-
-        .file-row { width: 100%; max-width: 400px; padding: 15px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; opacity: 0.3; cursor: not-allowed; }
-        .unlocked { opacity: 1; cursor: pointer; color: var(--red); border-left: 2px solid var(--red); }
-
-        #text-output { font-size: 1.2rem; line-height: 1.6; max-width: 500px; text-align: left; min-height: 150px; }
-        .redact { background: #333; color: #333; padding: 0 5px; cursor: pointer; }
-        .revealed { background: transparent; color: var(--red); font-weight: bold; animation: glitch 0.2s infinite; }
-        @keyframes glitch { 0% { transform: translate(0); } 50% { transform: translate(-1px, 1px); } 100% { transform: translate(1px, -1px); } }
-
-        .sys-btn { margin-top: 40px; background: none; border: 1px solid var(--red); color: var(--red); padding: 10px 25px; cursor: pointer; display: none; text-transform: uppercase; }
-        
-        .lock-icon { font-size: 50px; color: var(--red); margin-bottom: 20px; }
-        .timer { font-size: 2.5rem; color: var(--gray); margin-top: 20px; letter-spacing: 5px; }
-    </style>
+<title>OWEN FILES</title>
+<style>
+body{
+  margin:0;
+  background:#bdbdbd;
+  font-family:monospace;
+  color:#111;
+  animation:tv 0.25s infinite;
+}
+@keyframes tv{
+  0%{transform:translateY(0)}
+  50%{transform:translateY(1px)}
+  100%{transform:translateY(0)}
+}
+.center{
+  text-align:center;
+  margin-top:120px;
+}
+.hidden{display:none}
+button{
+  background:none;
+  border:1px solid #111;
+  padding:10px;
+  cursor:pointer;
+  margin-top:20px;
+}
+.file{
+  max-width:600px;
+  margin:80px auto;
+  padding:20px;
+  animation:fade 1s forwards;
+}
+@keyframes fade{
+  from{opacity:0}
+  to{opacity:1}
+}
+.redacted{
+  background:#111;
+  color:#111;
+  padding:2px 6px;
+}
+#crash{
+  position:fixed;
+  inset:0;
+  background:#bdbdbd;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  animation:flicker 0.15s infinite;
+  z-index:999;
+}
+@keyframes flicker{
+  0%{opacity:1}
+  50%{opacity:0.7}
+  100%{opacity:1}
+}
+.poster{
+  width:320px;
+  margin:120px auto;
+  padding:20px;
+  border:2px solid #111;
+  background:#cfcfcf;
+}
+.owen{
+  font-weight:bold;
+  letter-spacing:3px;
+  animation:pulse 1s infinite;
+}
+@keyframes pulse{
+  0%{opacity:1}
+  50%{opacity:0.4}
+  100%{opacity:1}
+}
+.top-left{
+  position:fixed;
+  top:10px;
+  left:10px;
+  font-size:12px;
+  opacity:0.5;
+}
+.top-right{
+  position:fixed;
+  top:10px;
+  right:10px;
+}
+</style>
 </head>
-<body onload="checkInitialState()">
+<body>
 
-<div id="lines"></div>
+<div id="timer" class="center">
+  <div class="top-right">
+    <input id="pass" placeholder="password">
+    <button onclick="skip()">skip</button>
+  </div>
+  <h2>OWEN FILES</h2>
+  <p id="countdown"></p>
+</div>
 
-<section id="scr-lock" class="screen">
-    <div class="lock-icon">🔒</div>
-    <h2 id="lock-msg">SYSTEM TEMPORARILY ARCHIVED</h2>
-    <div id="timer" class="timer">00:00:00</div>
-    <button id="unlock-btn" class="sys-btn" onclick="enterDirectory()">[ ACCESS GRANTED ]</button>
-</section>
+<div id="directory" class="center hidden">
+  <h2>OWEN FILES</h2>
+  <button onclick="openFile(1)">file 1</button>
+  <button onclick="openFile(2)">file 2</button>
+  <button onclick="openFile(3)">file 3</button>
+  <button onclick="openFile(4)">file 4</button>
+  <button onclick="openFile(5)">file 5</button>
+  <button onclick="openFile(6)">file 6</button>
+  <button onclick="openFile(7)">file 7</button>
+  <button id="footageBtn" class="hidden" onclick="openFootage()">last known footage</button>
+</div>
 
-<section id="scr-dir" class="screen">
-    <h2 style="letter-spacing: 15px;">FILES</h2>
-    <div id="dir-container" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
-</section>
+<div id="file" class="file hidden"></div>
 
-<section id="scr-view" class="screen">
-    <div id="text-output"></div>
-    <button id="next-btn" class="sys-btn" onclick="backToDir()">[ RETURN TO DIRECTORY ]</button>
-    <button id="final-btn" class="sys-btn" onclick="finalLock()">[ TRANSMIT FINAL REPORT ]</button>
-</section>
+<div id="crash">
+  <div>SYSTEM ERROR<br><br>FILE CORRUPTION DETECTED<br><br>RECOVERING…</div>
+</div>
 
 <script>
-    let currentLvl = parseInt(localStorage.getItem('owen_lvl')) || 1;
-    const story = [
-        "Everyone loved him. Friendly. Always floating around cracking jokes. Then one day... <span class='redact' onclick='revealName(this, 1)'>#####</span> stopped showing up.",
-        "Zac was the last one to see him. They were at the bridge. Zac says he left early, but the cameras show him being followed by <span class='redact' onclick='revealName(this, 2)'>#####</span>.",
-        "The car was found empty. No struggle. Just a single glove belonging to <span class='redact' onclick='revealName(this, 3)'>#####</span>.",
-        "We checked the basement. The walls were covered in photos of Zac. Taken by <span class='redact' onclick='revealName(this, 4)'>#####</span>.",
-        "He sat in interrogation smiling. He knew we couldn't find the body. That monster is <span class='redact' onclick='revealName(this, 5)'>#####</span>.",
-        "A year later, a letter arrived with coordinates and one name: <span class='redact' onclick='revealName(this, 6)'>#####</span>.",
-        "The coordinates lead here. He is watching you right now. Signed, <span class='redact' onclick='revealName(this, 7)'>#####</span>."
-    ];
+const release = new Date()
+release.setDate(release.getDate()+1)
+release.setHours(17,0,0)
 
-    function checkInitialState() {
-        if (!localStorage.getItem('lock_time')) {
-            // Set target to Tomorrow at 5:00 PM
-            let target = new Date();
-            target.setDate(target.getDate() + 1);
-            target.setHours(17, 0, 0, 0); 
-            localStorage.setItem('lock_time', target.getTime());
-        }
-        runClock();
+function tick(){
+  const now=new Date()
+  const diff=release-now
+  if(diff<=0){showDirectory();return}
+  const h=Math.floor(diff/36e5)
+  const m=Math.floor(diff%36e5/6e4)
+  const s=Math.floor(diff%6e4/1e3)
+  countdown.innerText=h+":"+m+":"+s
+}
+setInterval(tick,1000)
+
+function skip(){
+  if(pass.value==="admin"){
+    showDirectory()
+  }
+}
+
+function showDirectory(){
+  timer.classList.add("hidden")
+  directory.classList.remove("hidden")
+}
+
+function openFile(n){
+  directory.classList.add("hidden")
+  file.classList.remove("hidden")
+  file.innerHTML=`
+  <p>zac used to come around every night</p>
+  <p>people noticed when he stopped</p>
+  <p>the last name mentioned was <span class="redacted">owen</span></p>
+  ${n<7?'<button onclick="nextFile('+n+')">next</button>':'<button onclick="triggerCrash()">finish file</button>'}
+  `
+}
+
+function nextFile(n){
+  openFile(n+1)
+}
+
+function triggerCrash(){
+  crash.style.display="flex"
+  setTimeout(()=>{
+    localStorage.setItem("footage","true")
+    crash.style.display="none"
+    file.classList.add("hidden")
+    directory.classList.remove("hidden")
+    if(localStorage.getItem("footage")){
+      footageBtn.classList.remove("hidden")
     }
+  },4000)
+}
 
-    function runClock() {
-        showScreen('scr-lock');
-        const timerElement = document.getElementById('timer');
-        const unlockBtn = document.getElementById('unlock-btn');
+function openFootage(){
+  directory.classList.add("hidden")
+  file.classList.remove("hidden")
+  file.innerHTML=`
+  <div class="poster">
+    NAME zac<br><br>
+    STATUS missing<br><br>
+    LAST SEEN WITH<br>
+    <span class="owen">OWEN</span>
+  </div>
+  `
+}
 
-        const clockInterval = setInterval(() => {
-            const now = new Date().getTime();
-            const end = localStorage.getItem('lock_time');
-            const diff = end - now;
-
-            if (diff <= 0) {
-                clearInterval(clockInterval);
-                timerElement.innerText = "00:00:00";
-                if (localStorage.getItem('final_done') !== 'true') {
-                    unlockBtn.style.display = "block";
-                }
-                return;
-            }
-
-            const h = Math.floor(diff / 3600000);
-            const m = Math.floor((diff % 3600000) / 60000);
-            const s = Math.floor((diff % 60000) / 1000);
-            timerElement.innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-        }, 1000);
-    }
-
-    function showScreen(id) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-    }
-
-    function enterDirectory() { showScreen('scr-dir'); renderDir(); }
-
-    function renderDir() {
-        const container = document.getElementById('dir-container');
-        container.innerHTML = "";
-        for (let i = 1; i <= 7; i++) {
-            const row = document.createElement('div');
-            row.className = `file-row ${i <= currentLvl ? 'unlocked' : ''}`;
-            row.innerHTML = `<span>FILE_00${i}</span> <span>${i <= currentLvl ? '[READY]' : '[LOCKED]'}</span>`;
-            if (i <= currentLvl) row.onclick = () => openFile(i - 1);
-            container.appendChild(row);
-        }
-    }
-
-    function openFile(idx) {
-        showScreen('scr-view');
-        const out = document.getElementById('text-output');
-        document.getElementById('next-btn').style.display = "none";
-        document.getElementById('final-btn').style.display = "none";
-        
-        let i = 0;
-        let fullHtml = story[idx];
-        out.innerHTML = "";
-        
-        const typeTimer = setInterval(() => {
-            i++;
-            // This allows the HTML tags like <span class='redact'> to render properly
-            if (fullHtml.charAt(i) === '<') i = fullHtml.indexOf('>', i) + 1;
-            out.innerHTML = fullHtml.substring(0, i);
-            if (i >= fullHtml.length) clearInterval(typeTimer);
-        }, 30);
-    }
-
-    function revealName(el, num) {
-        el.innerText = "OWEN";
-        el.className = "revealed";
-        if (num === 7) {
-            document.getElementById('final-btn').style.display = "block";
-        } else {
-            if (num === currentLvl) {
-                currentLvl++;
-                localStorage.setItem('owen_lvl', currentLvl);
-            }
-            document.getElementById('next-btn').style.display = "block";
-        }
-    }
-
-    function backToDir() { enterDirectory(); }
-
-    function finalLock() {
-        localStorage.setItem('final_done', 'true');
-        // Set a new 4-hour lock for the end
-        localStorage.setItem('lock_time', new Date().getTime() + (4 * 60 * 60 * 1000));
-        document.getElementById('lock-msg').innerText = "CASE CLOSED. TERMINAL WIPED.";
-        document.getElementById('unlock-btn').style.display = "none";
-        runClock();
-    }
+if(localStorage.getItem("footage")){
+  footageBtn.classList.remove("hidden")
+}
 </script>
+
 </body>
 </html>
